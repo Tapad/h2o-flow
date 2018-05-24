@@ -35,6 +35,9 @@ H2O.ModelsOutput = (_, _go, _models) ->
 
     inspect = ->
       _.insertAndExecuteCell 'cs', "inspect getModel #{stringify model.model_id.name}"
+  
+    exportToTapad = ->
+      _.insertAndExecuteCell 'cs', "exportModelsToTapad [#{stringify model.model_id.name}]"
 
     key: model.model_id.name
     algo: model.algo_full_name
@@ -42,6 +45,7 @@ H2O.ModelsOutput = (_, _go, _models) ->
     predict: predict
     clone: cloneModel
     inspect: inspect
+    exportToTapad: exportToTapad
     view: view
 
   buildModel = ->
@@ -67,6 +71,10 @@ H2O.ModelsOutput = (_, _go, _models) ->
     allKeys = (view.key for view in _modelViews())
     #TODO use table origin
     _.insertAndExecuteCell 'cs', "inspect getModels #{stringify allKeys}"
+  
+  exportAllToTapad = ->
+    allKeys = (view.key for view in _modelViews())
+    _.insertAndExecuteCell 'cs', "exportModelsToTapad #{stringify allKeys}"
 
   initialize = (models) ->
     _modelViews map models, createModelView
@@ -85,5 +93,6 @@ H2O.ModelsOutput = (_, _go, _models) ->
   hasSelectedModels: _hasSelectedModels
   checkAllModels: _checkAllModels
   inspect: inspectAll
+  exportAllToTapad: exportAllToTapad
   template: 'flow-models-output'
 

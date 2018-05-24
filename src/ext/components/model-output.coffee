@@ -776,6 +776,9 @@ H2O.ModelOutput = (_, _go, _model, refresh) ->
     exportModel = ->
       _.insertAndExecuteCell 'cs', "exportModel #{stringify _model.model_id.name}"
 
+    exportModelToTapad = ->
+      _.insertAndExecuteCell 'cs', "exportModelsToTapad [#{stringify _model.model_id.name}]"
+
     deleteModel = ->
       _.confirm 'Are you sure you want to delete this model?', { acceptCaption: 'Delete Model', declineCaption: 'Cancel' }, (accept) ->
         if accept
@@ -800,6 +803,7 @@ H2O.ModelOutput = (_, _go, _model, refresh) ->
     pojoPreview: _pojoPreview
     isPojoLoaded: _isPojoLoaded
     exportModel: exportModel
+    exportModelToTapad: exportModelToTapad
     deleteModel: deleteModel
 
 

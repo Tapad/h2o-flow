@@ -28,6 +28,7 @@
           +link('@key', 'view')
         td(data-bind='text:algo')
         td.flow-right 
+          +button('Export to Tapad', 'cloud-upload', 'exportToTapad')
           +button('Predict&hellip;', 'bolt', 'predict')
           //- +button('Clone&hellip;', 'copy', 'clone')
           +button('Inspect', 'list', 'inspect')
@@ -35,6 +36,7 @@
   .flow-panel
     //- +button('Compare selected&hellip;', 'area-chart', 'compareModels', 'canCompareModels')
     //- +button('Predict using selected models&hellip;', 'bolt', 'predictUsingModels', 'canCompareModels')
+    +button('Export selected to Tapad', 'cloud-upload', 'exportAllToTapad')
     +button('Inspect', 'list', 'inspect')
     +button('Delete selected', 'trash', 'deleteModels', 'hasSelectedModels')
 
