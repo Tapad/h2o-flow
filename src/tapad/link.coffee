@@ -18,8 +18,6 @@ messageListener = (event) ->
   data = event.data
   id = data.id
 
-  console.log data
-
   if data.type == "reply"
     callback = callbacks[id]
     return if not callbacks?
@@ -43,7 +41,6 @@ sendCommand = (cmd, args...) ->
     id: id
     cmd: cmd
     args: args
-  console.log message
   targetWindow.postMessage(message, targetOrigin)
 
 sendReply = (id, args...) ->
