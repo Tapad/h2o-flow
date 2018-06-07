@@ -20,10 +20,12 @@ H2O.Proxy = (_) ->
       ''
   
   http = (method, path, opts, go) ->
+    rawPath = path
+
     if path.substring(0,1) == "/"
       path = window.Flow.ContextPath + path.substring(1)
 
-    _.status 'server', 'request', path
+    _.status 'server', 'request', rawPath
 
     trackPath path
 
@@ -53,7 +55,7 @@ H2O.Proxy = (_) ->
           processData: no
 
     req.done (data, status, xhr) ->
-      _.status 'server', 'response', path
+      _.status 'server', 'response', rawPath
 
       try
         go null, data
@@ -61,7 +63,7 @@ H2O.Proxy = (_) ->
         go new Flow.Error "Error processing #{method} #{path}", error
 
     req.fail (xhr, status, error) ->
-      _.status 'server', 'error', path
+      _.status 'server', 'error', rawPath
 
       response = xhr.responseJSON
       
