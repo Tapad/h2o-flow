@@ -1,6 +1,6 @@
 getCellInputs = ->
   cells = filter window.flow.view.cells(), (cell) -> cell.type() == "cs"
-  inputs = reverse map cells, (cell) -> cell.input()
+  map cells, (cell) -> cell.input()
 
 getJsAst = (cs, go) ->
   kernel = Flow.CoffeescriptKernel
@@ -13,20 +13,18 @@ getJsAst = (cs, go) ->
       go null, {}
     else
       go null, ast
-      
-findModelInputs = (modelKeys, go) ->
-  inputs = do getCellInputs
+
+findInputWhere = (predicate, go) ->
+  inputs = reverse do getCellInputs
   asts = []
 
-  checkAstForModelInput = (modelKey, node) ->
-    # check if model_id property matches modelKey
-    if (isObject node) && node.type == "Property" && (node.key.value ? node.key.name) == "model_id" && node.value.value == modelKey
+  checkAstForMatch = (node) ->
+    if predicate node
       true
     else
-      # traverse node
-      some node, (child) -> (isObject child) && (checkAstForModelInput modelKey, child)
+      some node, (child) -> (isObject child) && (checkAstForMatch child)
 
-  findModelInput = (modelKey, go) ->
+  findInput = (go) ->
     findInputPipe = Flow.Async.pipe map inputs, (input, i) ->
       (foundInput, nextInput) ->
         return nextInput null, foundInput if foundInput?
@@ -37,19 +35,26 @@ findModelInputs = (modelKeys, go) ->
             getJsAst input, next
           (ast, next) ->
             asts[i] = ast if not asts[i]?
-            next null, checkAstForModelInput modelKey, ast
+            next null, checkAstForMatch node 
         ]
 
         checkInputPipe (err, matched) -> nextInput err, if matched then input else null
-    
+
     findInputPipe null, (err, foundInput) ->
       return go err if err?
       return go null, foundInput
-  
+
+findModelInputs = (modelKeys, go) ->
   results = {}
   (Flow.Async.pipe map modelKeys, (modelKey) ->
     (next) ->
-      findModelInput modelKey, (err, input) ->
+      predicate = (node) ->
+        (isObject node) &&
+        node.type == "Property" &&
+        (node.key.value ? node.key.name) == "model_id" &&
+        node.value.value == modelKey
+
+      findInputWhere predicate, (err, input) ->
         return next err if err?
         results[modelKey] = input
         do next
@@ -58,41 +63,16 @@ findModelInputs = (modelKeys, go) ->
     go null, results
 
 findFrameInputs = (frameKeys, go) ->
-  inputs = do getCellInputs
-  asts = []
-
-  checkAstForFrameInput = (frameKey, node) ->
-    # check if destination_frame property matches frameKey
-    if (isObject node) && node.type == "Property" && (node.key.value ? node.key.name) == "destination_frame" && node.value.value == frameKey
-      true
-    else
-      # traverse node
-      some node, (child) -> (isObject child) && (checkAstForFrameInput frameKey, child)
-
-  findFrameInput = (frameKey, go) ->
-    findInputPipe = Flow.Async.pipe map inputs, (input, i) ->
-      (foundInput, nextInput) ->
-        return nextInput null, foundInput if foundInput?
-
-        checkInputPipe = Flow.Async.pipe [
-          (next) ->
-            return next null, asts[i] if asts[i]?
-            getJsAst input, next
-          (ast, next) ->
-            asts[i] = ast if not asts[i]?
-            next null, checkAstForFrameInput frameKey, ast
-        ]
-
-        checkInputPipe (err, matched) -> nextInput err, if matched then input else null
-    
-    findInputPipe null, (err, foundInput) ->
-      return go err if err?
-      return go null, foundInput
-  
   results = {}
   (Flow.Async.pipe map frameKeys, (frameKey) ->
     (next) ->
-      findFrameInput frameKey, (err, input) ->
+      predicate = (node) ->
+        (isObject node) &&
+        node.type == "Property" &&
+        (node.key.value ? node.key.name) == "destination_frame" &&
+        node.value.value == frameKey
+
+      findInputWhere frameKey, (err, input) ->
         return next err if err?
         results[frameKey] = input
         do next
@@ -164,6 +144,7 @@ simplifyModelResults = (results) -> results.map simplifyModelResult
 if not window.Tapad?
   window.Tapad = {}
 window.Tapad.Util =
+  getCellInputs: getCellInputs
   findModelInputs: findModelInputs
   findFrameInputs: findFrameInputs
   simplifyModelResults: simplifyModelResults

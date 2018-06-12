@@ -878,3 +878,5 @@ Flow.Notebook = (_, _renderers) ->
   about: _about
   dialogs: _dialogs
   templateOf: (view) -> view.template
+  serialize: serialize
+  deserialize: deserialize
