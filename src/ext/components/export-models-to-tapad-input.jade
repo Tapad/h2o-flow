@@ -1,0 +1,33 @@
+.flow-widget
+  +subtitle('Export Models to Tapad', 'cloud-upload')
+
+  table.flow-form
+    tr
+      th(width='1')
+        label Models:
+      td
+        div
+          label
+            input(type='checkbox' data-bind='checked:allSelected')
+            i Select All
+        // ko foreach:exportableModels
+        div
+          label
+            input(type='checkbox' data-bind='checked:selected')
+            span(data-bind='text:name')
+        // /ko
+
+        // ko foreach:unexportableModels
+        div
+          label
+            input(type='checkbox' disabled)
+            span(data-bind='text:name')
+            i #{' '} (Missing MOJO)
+        // /ko
+    tr
+      th
+        label Actions:
+      td
+        button.flow-button(type='button' data-bind='click:exportModels, enable:canExportModels')
+          i.fa.fa-cloud-upload
+          span Export

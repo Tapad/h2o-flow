@@ -52,6 +52,9 @@ _assistance =
   predict:
     description: 'Make a prediction'
     icon: 'bolt'
+  exportModelsToTapad:
+    description: 'Export Models to Tapad'
+    icon: 'cloud-upload'
 
 parseNumbers = (source) ->
   target = new Array source.length
@@ -1916,6 +1919,59 @@ H2O.Routines = (_) ->
       _fork dumpFuture, f
     else
       Flow.Async.async -> f
+  
+  requestDataForTapad = (modelKeys, go) ->
+    results = []
+
+    # for each model, export mojo, get model data, frame data
+    modelsPipe = Flow.Async.pipe map modelKeys, (modelKey) ->
+      (nextModel) ->
+        result = {}
+        modelPipe = Flow.Async.pipe [
+          (next) ->
+            _.requestModel modelKey, next
+          (model, next) ->
+            return next new Flow.Error "Model #{ modelKey } could not be exported, missing MOJO" if not model.have_mojo
+            result.model = model
+            frameKey = model.data_frame.name
+            _.requestFrame frameKey, next
+          (frame, next) ->
+            result.frame = frame
+
+            # TODO: determine a mojo path for the mart (should this be info pulled in from unify?)
+            mojoPath = "gs://h2o-flows.tapad-dataplatform-stg.us-central1.tapad.com/mojo/tmp/#{ modelKey }.zip"
+            _.requestExportModel "mojo", modelKey, mojoPath, true, next
+          (exportResult, next) ->
+            result.mojoPath = exportResult.dir
+            push results, result
+            do next
+        ]
+        modelPipe nextModel
+
+    (Flow.Async.pipe [
+      modelsPipe
+      (next) -> Tapad.Util.findModelInputs modelKeys, next
+      (modelInputs, next) ->
+        forEach results, (result) ->
+          frameKey = result.model.model_id.name
+          result.modelInput = modelInputs[frameKey]
+
+        frameKeys = map results, (result) -> result.model.data_frame.name
+        Tapad.Util.findFrameInputs frameKeys, next
+      (frameInputs, next) ->
+        forEach results, (result) ->
+          frameKey = result.model.data_frame.name
+          result.frameInput = frameInputs[frameKey]
+        do next
+    ]) (err) ->
+      return go err if err?
+      simplifiedResults = Tapad.Util.simplifyModelResults results
+      Tapad.Link.sendCommand "setResults", simplifiedResults
+      go null, render_ results, H2O.ExportModelsToTapadOutput, results
+
+  exportModelsToTapad = (modelKeys) ->
+    return assist exportModelsToTapad, modelKeys if not modelKeys? or modelKeys.length == 0
+    _fork requestDataForTapad, modelKeys
 
   assist = (func, args...) ->
     if func is undefined
@@ -1950,6 +2006,8 @@ H2O.Routines = (_) ->
           _fork proceed, H2O.ImportModelInput, args
         when exportModel
           _fork proceed, H2O.ExportModelInput, args
+        when exportModelsToTapad
+          _fork proceed, H2O.ExportModelsToTapadInput, args
         else
           _fork proceed, H2O.NoAssist, []
 
@@ -2051,6 +2109,7 @@ H2O.Routines = (_) ->
     deleteModel: deleteModel
     importModel: importModel
     exportModel: exportModel
+    exportModelsToTapad: exportModelsToTapad
     predict: predict
     getPrediction: getPrediction
     getPredictions: getPredictions
